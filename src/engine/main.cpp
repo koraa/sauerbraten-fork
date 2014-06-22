@@ -1126,7 +1126,7 @@ int main(int argc, char **argv)
     logoutf("init: game");
     game::parseoptions(gameargs);
     initserver(dedicated>0, dedicated>1);  // never returns if dedicated
-    ASSERT(dedicated <= 1);
+    assert(dedicated <= 1);
     game::initclient();
 
     logoutf("init: video");
@@ -1266,7 +1266,7 @@ int main(int argc, char **argv)
         renderedframe = inbetweenframes = true;
     }
     
-    ASSERT(0);   
+    assert(0);   
     return EXIT_FAILURE;
 
     #if defined(WIN32) && !defined(_DEBUG) && !defined(__GNUC__)
