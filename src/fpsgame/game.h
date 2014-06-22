@@ -590,7 +590,7 @@ struct fpsstate
         }
     }
 
-    void respawn(int gamemode = NULL)
+    void respawn(int gamemode = 0)
     {
         health = maxhealth;
         armour = 0;
@@ -776,7 +776,7 @@ struct fpsent : dynent, fpsstate
         idlesound = idlechan = -1;
     }
 
-    void respawn(int gamemode = NULL)
+    void respawn(int gamemode = 0)
     {
         dynent::reset();
         fpsstate::respawn(gamemode);

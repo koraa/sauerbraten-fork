@@ -155,7 +155,7 @@ namespace server
             respawn();
         }
 
-        void respawn(int gamemode = NULL)
+        void respawn(int gamemode = 0)
         {
             fpsstate::respawn(gamemode);
             o = vec(-1e10f, -1e10f, -1e10f);
