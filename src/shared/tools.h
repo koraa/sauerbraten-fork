@@ -1,5 +1,7 @@
 // generic useful stuff for any C++ program
 #include <new>
+#include <algorithm>
+using namespace std;
 
 #ifndef _TOOLS_H
 #define _TOOLS_H
@@ -16,32 +18,6 @@ typedef unsigned long long int ullong;
 #define RESTRICT
 #endif
 
-#ifdef swap
-#undef swap
-#endif
-template<class T>
-static inline void swap(T &a, T &b)
-{
-    T t = a;
-    a = b;
-    b = t;
-}
-#ifdef max
-#undef max
-#endif
-#ifdef min
-#undef min
-#endif
-template<class T>
-static inline T max(T a, T b)
-{
-    return a > b ? a : b;
-}
-template<class T>
-static inline T min(T a, T b)
-{
-    return a < b ? a : b;
-}
 template<class T, class U>
 static inline T clamp(T a, U b, U c)
 {
