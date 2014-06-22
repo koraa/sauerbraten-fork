@@ -30,7 +30,7 @@ VARF(throttle_decel,    0, 2, 32, throttle());
 void throttle()
 {
     if(!curpeer) return;
-    ASSERT(ENET_PEER_PACKET_THROTTLE_SCALE==32);
+    assert(ENET_PEER_PACKET_THROTTLE_SCALE==32);
     enet_peer_throttle_configure(curpeer, throttle_interval*1000, throttle_accel, throttle_decel);
 }
 

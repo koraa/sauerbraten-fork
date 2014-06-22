@@ -1536,7 +1536,7 @@ void calcmatbb(int cx, int cy, int cz, int size, ivec &bbmin, ivec &bbmax)
 
 void setva(cube &c, int cx, int cy, int cz, int size, int csi)
 {
-    ASSERT(size <= 0x1000);
+    assert(size <= 0x1000);
 
     int vamergeoffset[MAXMERGELEVEL+1];
     loopi(MAXMERGELEVEL+1) vamergeoffset[i] = vamerges[i].length();

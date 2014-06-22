@@ -347,7 +347,7 @@ static void insertunlit(int i)
         if((l.type&LM_TYPE) == LM_BUMPMAP0)
         {
             bvec front(128, 128, 255);
-            ASSERT(lightmaps[i+1].insert(x, y, front.v, 1, 1));
+            assert(lightmaps[i+1].insert(x, y, front.v, 1, 1));
         }
         l.unlitx = x;
         l.unlity = y;
@@ -367,7 +367,7 @@ static void insertlightmap(lightmapinfo &li, layoutinfo &si)
         if(lightmaps[i].type == li.type && lightmaps[i].insert(si.x, si.y, li.colorbuf, si.w, si.h))
         {
             si.lmid = i + LMID_RESERVED;
-            if((li.type&LM_TYPE) == LM_BUMPMAP0) ASSERT(lightmaps[i+1].insert(si.x, si.y, (uchar *)li.raybuf, si.w, si.h));
+            if((li.type&LM_TYPE) == LM_BUMPMAP0) assert(lightmaps[i+1].insert(si.x, si.y, (uchar *)li.raybuf, si.w, si.h));
             return;
         }
     }
@@ -380,7 +380,7 @@ static void insertlightmap(lightmapinfo &li, layoutinfo &si)
     l.bpp = li.bpp;
     l.data = new uchar[li.bpp*LM_PACKW*LM_PACKH];
     memset(l.data, 0, li.bpp*LM_PACKW*LM_PACKH);
-    ASSERT(l.insert(si.x, si.y, li.colorbuf, si.w, si.h));
+    assert(l.insert(si.x, si.y, li.colorbuf, si.w, si.h));
     if((li.type&LM_TYPE) == LM_BUMPMAP0)
     {
         LightMap &r = lightmaps.add();
@@ -388,7 +388,7 @@ static void insertlightmap(lightmapinfo &li, layoutinfo &si)
         r.bpp = 3;
         r.data = new uchar[3*LM_PACKW*LM_PACKH];
         memset(r.data, 0, 3*LM_PACKW*LM_PACKH);
-        ASSERT(r.insert(si.x, si.y, (uchar *)li.raybuf, si.w, si.h));
+        assert(r.insert(si.x, si.y, (uchar *)li.raybuf, si.w, si.h));
     }
 }
 

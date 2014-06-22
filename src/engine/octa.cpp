@@ -624,10 +624,10 @@ static void genedgespanvert(ivec &p, cube &c, vec &v)
     if(plane1==plane3) genvertp(c, p, p1, p2, plane1, true);
     if(plane2==plane3) genvertp(c, p, p2, p3, plane2, true);
 
-    ASSERT(threeplaneintersect(plane1, plane2, plane3, v));
-    //ASSERT(v.x>=0 && v.x<=8);
-    //ASSERT(v.y>=0 && v.y<=8);
-    //ASSERT(v.z>=0 && v.z<=8);
+    assert(threeplaneintersect(plane1, plane2, plane3, v));
+    //assert(v.x>=0 && v.x<=8);
+    //assert(v.y>=0 && v.y<=8);
+    //assert(v.z>=0 && v.z<=8);
     v.x = max(0.0f, min(8.0f, v.x));
     v.y = max(0.0f, min(8.0f, v.y));
     v.z = max(0.0f, min(8.0f, v.z));
@@ -935,7 +935,7 @@ static inline int clipfacevec(const facevec &o, const facevec &dir, int cx, int 
     r += clipfacevecy(o, dir, cx, cy, size, rvecs[r]);
     r += clipfacevecy(o, dir, cx+size, cy, size, rvecs[r]);
 
-    ASSERT(r <= 2);
+    assert(r <= 2);
     return r;
 }
 
@@ -971,7 +971,7 @@ static inline int clipfacevecs(const facevec *o, int numo, int cx, int cy, int s
     }
     facevec corner[4] = {facevec(cx, cy), facevec(cx+size, cy), facevec(cx+size, cy+size), facevec(cx, cy+size)};
     loopi(4) if(insideface(&corner[i], 1, o, numo)) rvecs[r++] = corner[i];
-    ASSERT(r <= 8);
+    assert(r <= 8);
     return r;
 }
 
