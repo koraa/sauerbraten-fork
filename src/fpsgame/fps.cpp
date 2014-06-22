@@ -289,7 +289,7 @@ namespace game
 
     VARP(spawnwait, 0, 0, 1000);
 
-    void respawn(int gamemode = NULL)
+    void respawn(int gamemode = 0)
     {
         if(player1->state==CS_DEAD)
         {
