@@ -202,8 +202,8 @@ int connectwithtimeout(ENetSocket sock, const char *hostname, const ENetAddress 
         {
             if(ENET_SOCKETSET_CHECK(readset, sock) || ENET_SOCKETSET_CHECK(writeset, sock))
             {
-                int error = 0;
-                if(enet_socket_get_option(sock, ENET_SOCKOPT_ERROR, &error) < 0 || error) break;
+                //int error = 0;
+                //if(enet_socket_get_option(sock, ENET_SOCKOPT_ERROR, &error) < 0 || error) break;
                 return 0;
             }
         }

@@ -53,7 +53,7 @@ endif
 ifneq (, $(and $(pMINGW),$(p64),$(pNATIVE) ))
 
 WINDRES= windres -F pe-x86-64
-CXX=x86_64-w64-mingw32-g++ -m64
+CXX=g++ -m64
 STRIP=strip
 
 CLIENT_INCLUDES= $(INCLUDES) -Iinclude
@@ -85,7 +85,7 @@ endif
 ifneq (, $(and $(pMINGW),$(p64),$(pCROSS)))
 
 WINDRES=windres -F pe-x86-64
-CXX=x86_64-w64-mingw32-g++ -m64
+CXX=g++ -m64
 WINDRES=x86_64-w64-mingw32-windres
 STRIP=x86_64-w64-mingw32-strip
 

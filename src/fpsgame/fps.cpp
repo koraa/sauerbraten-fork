@@ -276,6 +276,13 @@ namespace game
 
     void spawnplayer(fpsent *d)   // place at random spawn
     {
+		/*
+			Hanni
+			spawn a player
+		*/
+		//conoutf("time passed since kill: %d", d->killed_millis);
+		conoutf("TesD");
+
         if(cmode) cmode->pickspawn(d);
         else findplayerspawn(d, d==player1 && respawnent>=0 ? respawnent : -1);
         spawnstate(d);
@@ -394,6 +401,13 @@ namespace game
 
     void killed(fpsent *d, fpsent *actor)
     {
+		/*
+			Hanni
+			store time passed since program start to determine killcam progress
+		*/
+		d->killed_millis = SDL_GetTicks();
+
+
         if(d->state==CS_EDITING)
         {
             d->editstate = CS_DEAD;
@@ -911,7 +925,7 @@ namespace game
         {
             if(d->state!=CS_SPECTATOR) drawhudicons(d);
             drawhudannounce(w, h);
-            drawosd(w, h);
+            //drawosd(w, h);
             if(cmode) cmode->drawhud(d, w, h);
         }
 

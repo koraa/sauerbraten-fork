@@ -1,5 +1,6 @@
 // sound.cpp: basic positional sound using sdl_mixer
 
+#include "cube.h"
 #include "engine.h"
 
 FVARP(osdscale, 1e-3f, 1.0f, 1e3f);
