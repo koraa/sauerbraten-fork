@@ -86,9 +86,6 @@ out-dir:
 bin-dir:
 	mkdir -p "$(BINDIR)"
 
-link-enet: fetch-enet link-src
-	cp -Rl "$(ENET_REF)" "$(OUT_ENET)"
-
 link-static-deps: fetch-static-deps link-src
 	test -d "$(SDEPS_REF)"/"$(OUT)" && cp -Rl "$(SDEPS_REF)"/"$(OUT)"/* "$(OUT_SRC)" || true
 
@@ -100,7 +97,7 @@ clean:
 
 # Compilation ##############################################
 
-compile: link-src link-enet link-static-deps
+compile: link-src link-static-deps
 	$(MAKE) -C $(OUT_SRC) -j $(JOBS)
 
 cpexe: compile bin-dir

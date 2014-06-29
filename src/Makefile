@@ -1,7 +1,7 @@
 PLATFORM= $(shell uname -som)
 PLATFORM_PREFIX= native
 
-INCLUDES= -Ishared -Iengine -Ifpsgame -Ienet/include
+INCLUDES= -Ishared -Iengine -Ifpsgame
 
 MV=mv
 
@@ -306,13 +306,13 @@ server: $(SERVER_OBJS)
 master: $(MASTER_OBJS)
 	$(CXX) $(CXXFLAGS) -o sauerbraten-fork_master.exe $(MASTER_OBJS) $(MASTER_LIBS)
 else #----------------------------------------- UNIX COMPILE
-client:	libenet $(CLIENT_OBJS)
+client:	$(CLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) -o sauerbraten-fork_client $(CLIENT_OBJS) $(CLIENT_LIBS)
 
-server:	libenet $(SERVER_OBJS)
+server:	$(SERVER_OBJS)
 	$(CXX) $(CXXFLAGS) -o sauerbraten-fork_server $(SERVER_OBJS) $(SERVER_LIBS)
 	
-master: libenet $(MASTER_OBJS)
+master: $(MASTER_OBJS)
 	$(CXX) $(CXXFLAGS) -o sauerbraten-fork_master $(MASTER_OBJS) $(MASTER_LIBS)
 
 shared/cube2font.o: shared/cube2font.c
@@ -325,9 +325,6 @@ endif #----------------------------------------------- ENDIF
 
 engine/macutils.o: engine/macutils.mm
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-libenet:
-	export $(ENV); cd enet; test -e .libs/libenet.a || ( autoreconf -vfi && ./configure $(ENET_CONFIGURE) && $(MAKE) )
 
 depend:
 	makedepend -Y -Ishared -Iengine -Ifpsgame $(subst .o,.cpp,$(CLIENT_OBJS))
