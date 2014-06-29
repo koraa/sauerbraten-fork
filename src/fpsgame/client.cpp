@@ -863,6 +863,19 @@ namespace game
 
     ICOMMAND(servcmd, "C", (char *cmd), addmsg(N_SERVCMD, "rs", cmd));
 
+	struct contentpack {
+		string name;
+		vector<char *>files;
+	};
+	vector<contentpack *> contentpacks;
+
+	bool sendfilerequest(int pack, int file)
+	{
+		// if(!hasfile(fn)) return false;
+        addmsg(N_GETFILE, "rii", pack, file);
+		return true;
+	}
+
     static void sendposition(fpsent *d, packetbuf &q)
     {
         putint(q, N_POS);
@@ -1862,6 +1875,43 @@ namespace game
                 }
                 break;
             }
+			case N_PACKLIST:
+			{
+				bool silent = getint(p) == 0;
+				int num = getint(p); 
+				if(num <= 0){ if(!silent) conoutf("no content packs available..."); }
+				else { 
+					if(!silent) conoutf("Available Content Packs:");
+					//loopv(contentpacks) DELETEP(contentpacks[i]) //todo: why is this buggy??
+					contentpacks.setsize(0);
+					loopi(num) {
+						getstring(text, p);
+						if(p.overread()) break;
+						contentpack *cp = contentpacks.add(new contentpack);
+						copystring(cp->name, text);
+						if(!silent) conoutf("%d. %s", i+1, text);
+					}
+				}
+				break;
+			}
+
+			case N_PACKFILES:
+			{
+				int pack = getint(p);
+				int files = getint(p);
+				
+				if(files > 0 && contentpacks.inrange(pack)) { 
+					loopi(files) { 
+						int size = getint(p);
+						getstring(text, p);
+						if(p.overread()) break;
+						if(contentpacks[pack]) contentpacks[pack]->files.add(newstring(text));
+						//conoutf("%s is %d KB big", text, size);
+					}
+					sendfilerequest(pack, 0); //not in the loop anymore, just the first file, go for the next file afterwards
+				}				
+				break;
+			}
 
             case N_INITAI:
             {
@@ -1923,6 +1973,27 @@ namespace game
                 remove(findfile(fname, "rb"));
                 break;
             }
+			case N_SENDFILE:
+			{
+				string  filename;
+				int pack = getint(p); //not explicitly 
+				int file = getint(p); //neccessary, just for requesting the next file afterwards
+
+				getstring(filename, p); //todo check consistent names
+				int finished = getint(p); //in %
+				stream *f = openrawfile(path(filename), "wb");
+				if(!f) { conoutf("could not save file (%s)", filename); return; }
+				if(finished <= 100) { 
+					conoutf("downloaded %d%%", finished);
+					sendfilerequest(pack, file+1); //request next file, todo check names and existens
+				}
+				else conoutf("received package");
+				ucharbuf b = p.subbuf(p.remaining());
+				f->write(b.buf, b.maxlen);
+				delete f;
+
+				break;
+			}
         }
     }
 
@@ -1992,6 +2063,20 @@ namespace game
         addmsg(N_LISTDEMOS, "r");
     }
     COMMAND(listdemos, "");
+
+	void listpacks()
+    {
+        conoutf("listing content packs of the server...");
+        addmsg(N_LISTPACKS, "ri", 1);
+    }
+    COMMAND(listpacks, "");
+
+	void getpack(int i)
+    {
+        conoutf("getting content pack %d...", i);
+        addmsg(N_GETPACKFILES, "ri", i-1);
+    }
+    ICOMMAND(getpack, "i", (int *num), getpack(*num));
 
     void sendmap()
     {

@@ -258,7 +258,7 @@ namespace server
         string clientmap;
         int mapcrc;
         bool warned, gameclip;
-        ENetPacket *getdemo, *getmap, *clipboard;
+        ENetPacket *getdemo, *getmap, *getfile, *clipboard;
         int lastclipboard, needclipboard;
         int connectauth;
         uint authreq;
@@ -267,7 +267,7 @@ namespace server
         int authkickvictim;
         char *authkickreason;
 
-        clientinfo() : getdemo(NULL), getmap(NULL), clipboard(NULL), authchallenge(NULL), authkickreason(NULL) { reset(); }
+        clientinfo() : getdemo(NULL), getmap(NULL), getfile(NULL), clipboard(NULL), authchallenge(NULL), authkickreason(NULL) { reset(); }
         ~clientinfo() { events.deletecontents(); cleanclipboard(); cleanauth(); }
 
         void addevent(gameevent *e)
@@ -1178,6 +1178,109 @@ namespace server
             sendservmsgf("cleared demo %d", n);
         }
     }
+
+	struct contentpack {
+		int size; //in KB
+		string name; //packname eg. "reissen"
+		string author;
+		struct file { int filesize; char *name; };
+		vector<file *> files; //all included files and dependencies
+		void calcsize()
+		{
+			size = 0;
+			loopv(files)
+			{
+				stream *f = openfile(files[i]->name, "r");
+				if(!f) continue;
+				size += ((int)f->size())/1024; 
+				files[i]->filesize =  ((int)f->size())/1024; 
+				delete f;
+			}
+		}
+	};
+	vector<contentpack *> contentpacks;
+
+	void newpack(const char *fn)
+	{
+		if(!fn || !fn[0]) return;
+		contentpack *p = contentpacks.add(new contentpack);
+		copystring(p->name, fn);
+		int len = strlen(fn);
+		if(len >= 5) if(p->name[len-5] == '.') p->name[len-5] = '\0'; //cut the file extensions
+	}
+	ICOMMAND(packname, "s", (const char *fn), newpack(fn));
+
+	void newpackfile(const char *fn)
+	{
+		if(!fn || !fn[0] || !contentpacks.length()) return;
+		contentpack *p = contentpacks.last();
+		p->files.add(new contentpack::file)->name = newstring(fn);
+	}
+	ICOMMAND(packfile, "s", (const char *fn), newpackfile(fn));
+	
+	void checkpacks()
+	{
+		int len = contentpacks.length();
+		conoutf("len = %d", len);
+		if(!len) return;
+		contentpacks[len-1]->calcsize();
+		loopv(contentpacks[len-1]->files) conoutf("%d %s (%d KB)", i, contentpacks[len-1]->files[i]->name, contentpacks[len-1]->files[i]->filesize ); 
+		conoutf("size = %d KB", contentpacks[len-1]->size);
+	}
+	COMMAND(checkpacks, ""); 
+	
+	void listpacks(int cn, bool msg = false)
+    {
+        packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
+        putint(p, N_PACKLIST);
+		putint(p, msg ? 1 : 0);
+		putint(p, contentpacks.length());
+		loopv(contentpacks) sendstring(contentpacks[i]->name, p);
+        sendpacket(cn, 1, p.finalize());
+    }
+	
+	void sendpackfilelist(int cn, int pack)
+    {
+		if(!contentpacks.inrange(pack) || !contentpacks[pack]) return;
+        contentpack *cp = contentpacks[pack];
+		cp->calcsize();
+		packetbuf p(MAXTRANS, ENET_PACKET_FLAG_RELIABLE);
+        putint(p, N_PACKFILES);
+		putint(p, pack);
+		putint(p, cp->files.length());
+		loopv(cp->files) { 
+			putint(p, cp->files[i]->filesize);
+			sendstring(cp->files[i]->name, p); 
+		}
+        sendpacket(cn, 1, p.finalize());
+    }
+
+	static void freegetfile(ENetPacket *packet)
+    {
+        loopv(clients)
+        {
+            clientinfo *ci = clients[i];
+            if(ci->getfile == packet) ci->getfile = NULL;
+        }
+    }
+
+	void sendpackfile(clientinfo *ci, int pack, int file)
+    {
+		if(ci->getdemo || ci->getmap || ci->getfile) return;
+        if(!contentpacks.inrange(pack) || !contentpacks[pack]) return;
+        contentpack *cp = contentpacks[pack];
+		if(!cp->files.inrange(file) || !cp->files[file]) return;
+		contentpack::file *f = cp->files[file];
+		int len;
+		stream *s = openrawfile(path(f->name), "rb");
+		if(!s) { conoutf("no file found on the server"); return; }
+		int cursize = 0;
+		for(int i = 0; i <= file; i++) { cursize += cp->files[i]->filesize; }
+		int percentage = cursize*100/cp->size;
+
+		if((ci->getfile = sendfile(ci->clientnum, 2, s, "riiisi", N_SENDFILE, pack, file, f->name, percentage)))
+                       ci->getfile->freeCallback = freegetfile;
+	}
 
     static void freegetmap(ENetPacket *packet)
     {
@@ -3515,6 +3618,29 @@ namespace server
             case N_FORCEINTERMISSION:
                 if(ci->local && !hasnonlocalclients()) startintermission();
                 break;
+
+			case N_LISTPACKS:
+			{
+				bool msg = getint(p) != 0;
+                listpacks(sender, msg);
+                break;
+			}
+			
+			case N_GETPACKFILES:
+			{
+				int f = getint(p);
+				sendpackfilelist(sender, f);
+				break;
+			}
+
+			case N_GETFILE:
+            {
+                int pack = getint(p);
+				int file = getint(p);
+				conoutf("received getfile request, %d, %d", pack, file); 
+                sendpackfile(ci, pack, file);
+                break;
+            }
 
             case N_RECORDDEMO:
             {
