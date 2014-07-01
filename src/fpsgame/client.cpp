@@ -131,18 +131,25 @@ namespace game
 
     VARP(deadpush, 1, 2, 20);
 
-    void switchname(const char *name)
+    void switchname(const char *name, const char *tag)
     {
-        if(name[0])
+        if(name[0] || tag[0])
         {
-            filtertext(player1->name, name, false, MAXNAMELEN);
-            if(!player1->name[0]) copystring(player1->name, "unnamed");
-            addmsg(N_SWITCHNAME, "rs", player1->name);
+			if(name[0]) {
+				filtertext(player1->name, name, false, MAXNAMELEN);
+				if(!player1->name[0]) copystring(player1->name, "unnamed");
+			}
+			if(tag[0]) {
+				filtertext(player1->tag, tag, false, MAXTAGLEN);
+			}
+			addmsg(N_SWITCHNAME, "rss", player1->name, player1->tag);
         }
-        else conoutf("your name is: %s", colorname(player1));
+		else conoutf("your name is: %s (tag: %s)", colorname(player1), player1->tag);
+
     }
-    ICOMMAND(name, "s", (char *s), switchname(s));
+    ICOMMAND(name, "ss", (char *s, char *t), switchname(s, t));
     ICOMMAND(getname, "", (), result(player1->name));
+	ICOMMAND(gettag, "", (), result(player1->tag));
 
     void switchteam(const char *team)
     {
@@ -1367,14 +1374,19 @@ namespace game
                     if(needclipboard >= 0) needclipboard++;
                 }
                 copystring(d->name, text, MAXNAMELEN+1);
-                getstring(text, p);
+                
+				getstring(text, p);
                 filtertext(d->team, text, false, MAXTEAMLEN);
+				
+				getstring(text, p);
+                filtertext(d->tag, text, false, MAXTAGLEN);
+
                 d->playermodel = getint(p);
                 break;
             }
 
             case N_SWITCHNAME:
-                getstring(text, p);
+                getstring(text, p); //name
                 if(d)
                 {
                     filtertext(text, text, false, MAXNAMELEN);
@@ -1385,6 +1397,8 @@ namespace game
                         copystring(d->name, text, MAXNAMELEN+1);
                     }
                 }
+				getstring(text, p); //tag
+				if(d) filtertext(d->tag, text, false, MAXTAGLEN);
                 break;
 
             case N_SWITCHMODEL:
