@@ -53,6 +53,8 @@ set(CLIENT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../engine/lightmap
     ${CMAKE_CURRENT_SOURCE_DIR}/../engine/glare
     ${CMAKE_CURRENT_SOURCE_DIR}/../engine/blob
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../engine/lua
     ${CMAKE_CURRENT_SOURCE_DIR}/../engine/osd
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../fpsgame/ai
@@ -94,6 +96,8 @@ target_link_libraries(${SB_CLIENT_BINARY}
     ${SDL_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    ${LUAJIT_LIBRARIES}
+    ${LUVIT_LIBRARIES}
     ${BUILD_EXTRA_LIBS}
 )
 

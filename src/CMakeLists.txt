@@ -6,7 +6,26 @@ find_package(PkgConfig)
 option(BUILD_CLIENT "Build the client" ${OPENGL_FOUND})
 option(BUILD_SERVER "Build the server" 1)
 
-if(${BUILD_TARGET_WINDOWS} AND ${CMAKE_C_COMPILER} MATCHES "mingw")
+message(STATUS "Detecting LuaJIT...")
+if(NOT ${BUILD_TARGET_WINDOWS} AND PKG_CONFIG_FOUND)
+    message(STATUS "Using pkg-config to detect LuaJIT...")
+    pkg_check_modules(LUAJIT QUIET luajit)
+    if(LUAJIT_FOUND)
+        message(STATUS "Found LuaJIT.")
+        message(STATUS "include: ${LUAJIT_INCLUDE_DIRS}")
+    else()
+        message(FATAL_ERROR "LuaJIT not found.")
+    endif()
+elseif(NOT DEFINED LUAJIT_LIBRARIES)
+    message(STATUS "Using local LuaJIT.")
+    set(LUAJIT_LIBRARY_DIRS "")
+    set(LUAJIT_INCLUDE_DIRS "")
+    set(LUAJIT_LIBRARIES luajit)
+endif()
+
+if(${BUILD_TARGET_OSX})
+    set(BUILD_EXTRA_LIBS ${BUILD_EXTRA_LIBS} -pagezero_size 10000 -image_base 100000000)
+elseif(${BUILD_TARGET_WINDOWS} AND ${CMAKE_C_COMPILER} MATCHES "mingw")
     set(BUILD_EXTRA_LIBS ${BUILD_EXTRA_LIBS} -static-libgcc)
 endif()
 
@@ -70,11 +89,15 @@ add_subdirectory(libraries/luapp)
 include_directories(
     ${ENET_INCLUDE_DIRS}
     ${SDL_INCLUDE_DIRS}
+    ${LUAJIT_INCLUDE_DIRS}
+    ${UV_INCLUDE_DIRS}
+    ${LUVIT_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/shared
     ${CMAKE_CURRENT_SOURCE_DIR}/engine
     ${CMAKE_CURRENT_SOURCE_DIR}/game
 )
+
 
 if(${BUILD_CLIENT})
     add_subdirectory(client)

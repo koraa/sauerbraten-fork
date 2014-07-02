@@ -1,6 +1,7 @@
 // main.cpp: initialisation & main loop
 
 #include "engine.h"
+#include "lapi.h"
 
 extern void cleargamma();
 
@@ -61,6 +62,8 @@ void fatal(const char *s, ...)    // failure exit
 
     exit(EXIT_FAILURE);
 }
+
+uv_loop_t *loop;
 
 SDL_Surface *screen = NULL;
 
@@ -325,6 +328,7 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
 {
     if(!inbetweenframes || envmapping) return;
 
+    uv_run(loop, UV_RUN_NOWAIT);
     clientkeepalive();      // make sure our connection doesn't time out while loading maps etc.
     
     #ifdef __APPLE__
@@ -1129,6 +1133,15 @@ int main(int argc, char **argv)
     ASSERT(dedicated <= 1);
     game::initclient();
 
+    logoutf("init: lua");
+    loop = uv_default_loop();
+    if(!lua::init(argc, (const char **)argv)) fatal("Failed to initialize lua module.");
+
+    if(luaL_dostring(lua::L, "require \"client\""))
+    {
+        fatal("Failed to initialize lua module: %s", lua_tostring(lua::L, -1));
+    }
+
     logoutf("init: video");
     const SDL_VideoInfo *video = SDL_GetVideoInfo();
     if(video) 
@@ -1245,6 +1258,7 @@ int main(int argc, char **argv)
 
         if(lastmillis) game::updateworld();
 
+        uv_run(loop, UV_RUN_NOWAIT);
         checksleep(lastmillis);
 
         serverslice(false, 0);
