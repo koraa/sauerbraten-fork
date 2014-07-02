@@ -61,6 +61,12 @@ if(${LOCAL_ENET})
     add_subdirectory(libraries/enet)
 endif()
 
+add_subdirectory(libraries/http-parser)
+add_subdirectory(libraries/yalj)
+add_subdirectory(libraries/uv)
+add_subdirectory(libraries/luvit)
+add_subdirectory(libraries/luapp)
+
 include_directories(
     ${ENET_INCLUDE_DIRS}
     ${SDL_INCLUDE_DIRS}

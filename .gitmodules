@@ -10,3 +10,23 @@
 	path = src/platform_osx
 	url = https://github.com/Theintercooler/Platform-osx.git
 	branch = master
+[submodule "src/libraries/uv"]
+	path = src/libraries/uv
+	url = https://github.com/Theintercooler/libuv.git
+	branch = master
+[submodule "src/libraries/luvit"]
+	path = src/libraries/luvit
+	url = https://github.com/Theintercooler/luvit.git
+	branch = master
+[submodule "src/libraries/luapp"]
+	path = src/libraries/luapp
+	url = https://github.com/Theintercooler/luapp.git
+	branch = master
+[submodule "src/libraries/yalj"]
+	path = src/libraries/yalj
+	url = https://github.com/Theintercooler/yajl.git
+	branch = master
+[submodule "src/libraries/http-parser"]
+	path = src/libraries/http-parser
+	url = https://github.com/Theintercooler/http-parser.git
+	branch = master

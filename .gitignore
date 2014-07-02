@@ -18,3 +18,5 @@ rpg.bat
 
 build*
 bin*
+/resources/lua/luvit
+/resources/lua/luapp.lua
