@@ -2524,16 +2524,16 @@ void gl_drawhud(int w, int h)
             limitgui = abovehud = min(abovehud, int(conh*game::abovegameplayhud(w, h)));
         }
 
-        if(lua::pushEvent("gui.draw"))
-        {
-            lua_pushnumber(lua::L, w);
-            lua_pushnumber(lua::L, h);
-            lua_call(lua::L, 2, 0);
-        }
-
         rendertexturepanel(w, h);
     }
-    
+
+    if(lua::pushEvent("gui.draw"))
+    {
+        lua_pushnumber(lua::L, w);
+        lua_pushnumber(lua::L, h);
+        lua_call(lua::L, 2, 0);
+    }
+
     g3d_limitscale((2*limitgui - conh) / float(conh));
 
     glPushMatrix();
