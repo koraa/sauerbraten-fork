@@ -64,6 +64,7 @@
 #include "geom.h"
 #include "ents.h"
 #include "command.h"
+#include "lapi.h"
 
 #include "iengine.h"
 #include "igame.h"

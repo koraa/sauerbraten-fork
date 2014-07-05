@@ -1,4 +1,7 @@
 
+#ifndef ENGINE_LAPI_H
+#define ENGINE_LAPI_H
+
 extern "C"
 {
     #include "lua.h"
@@ -48,3 +51,16 @@ namespace lua
      */
     extern void unpinString(const char *string);
 }
+
+#ifdef WIN32
+    #define EXPORTH(prototype) \
+        extern "C" __declspec(dllexport) prototype
+    #define EXPORT(prototype) \
+        EXPORTH(prototype); \
+        extern "C" prototype
+#else
+    #define EXPORTH(prototype) extern "C" prototype
+    #define EXPORT(prototype) extern "C" prototype
+#endif
+
+#endif /* ENGINE_LAPI_H */

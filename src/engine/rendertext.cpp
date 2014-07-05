@@ -332,7 +332,15 @@ void text_boundsf(const char *str, float &width, float &height, int maxwidth)
     #undef TEXTWORD
 }
 
-void draw_text(const char *str, int left, int top, int r, int g, int b, int a, int cursor, int maxwidth) 
+EXPORT(void text_boundsp(const char *str, int *w, int *h, int maxwidth))
+{
+    float widthf, heightf;
+    text_boundsf(str, widthf, heightf, maxwidth);
+    *w = int(ceil(widthf));
+    *h = int(ceil(heightf));
+}
+
+EXPORT(void draw_text(const char *str, int left, int top, int r, int g, int b, int a, int cursor, int maxwidth))
 {
     #define TEXTINDEX(idx) if(idx == cursor) { cx = x; cy = y; }
     #define TEXTWHITE(idx)
