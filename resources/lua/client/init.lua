@@ -5,6 +5,7 @@ local traceback = require "debug".traceback
 local ffi = require "ffi"
 local table = require "table"
 local sort, remove = table.sort, table.remove
+local max = require "math".max
 
 local native = require "client.native"
 
@@ -68,16 +69,19 @@ end
 -- Note that Z only affects sorting of the element and it's siblings
 function UiElement:draw(x, y)
     local origionalX = x
+    local maxH = 0
     for k, element in pairs(self.children) do
         local _x, _y = x + element.x, y + element.y
         local w, h = element.w, element.h
+        maxH = max(maxH, h)
         element:draw(_x, _y)
         if self.alignment == 1 then
             _x = x + w
             if _x >= self.maxWidth or _x + w >= self.maxWidth then
                 -- Jump line
                 x = origionalX
-                y = _y + h
+                y = _y + maxH
+                maxH = 0
             else
                 x = _x
             end
@@ -87,7 +91,7 @@ end
 
 local BoxElement = UiElement:extend()
 
-BoxElement.texture = nil
+BoxElement.texture = "packages/texture/notexture.png"
 
 BoxElement.r = 1
 BoxElement.g = 1
@@ -96,13 +100,12 @@ BoxElement.b = 1
 -- BoxElement.a = 1 TODO: implement
 
 function BoxElement:draw(x, y)
-    print "draw"
     native.glPushMatrix();
     native.glScalef(1, 1, 1);
 
     if self.texture then
         native.glColor4f(1, 1, 1, 1)
-        native.settexture(o.file, 0)
+        native.settexture(self.texture, 0)
     else
         native.glColor4f(self.r, self.g, self.b, 1)
     end
@@ -165,13 +168,15 @@ end
 local UiRoot = UiElement:extend()
 
 local uiRoot
+local box
+local mode = 1
 
 _G.setCallback("gui.draw", function(w, h)
     assert(xpcall(function()
         if not uiRoot then
             uiRoot = UiRoot:new()
             
-            local box = BoxElement:new()
+            box = BoxElement:new()
             box.w = 100
             box.h = 100
 
@@ -182,8 +187,15 @@ _G.setCallback("gui.draw", function(w, h)
             uiRoot:addChild(TextElement:new())
             uiRoot.maxWidth = 700
             uiRoot.alignment = 1
-            
         end
+
+        box.w = box.w + mode
+        box.h = box.h + mode
+
+        if box.h > 100 or box.h < 0 then
+            mode = -mode
+        end
+
         uiRoot:draw(0, 0)
     end, traceback))
 end)
