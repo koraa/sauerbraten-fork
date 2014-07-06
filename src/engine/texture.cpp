@@ -1291,7 +1291,7 @@ Texture *textureload(const char *name, int clamp, bool mipit, bool msg)
     return notexture;
 }
 
-bool settexture(const char *name, int clamp)
+EXPORT(bool settexture(const char *name, int clamp))
 {
     Texture *t = textureload(name, clamp, true, false);
     glBindTexture(GL_TEXTURE_2D, t->id);
