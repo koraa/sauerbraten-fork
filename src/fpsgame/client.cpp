@@ -870,9 +870,13 @@ namespace game
 
     ICOMMAND(servcmd, "C", (char *cmd), addmsg(N_SERVCMD, "rs", cmd));
 
+
 	struct contentpack {
-		string name;
-		vector<char *>files;
+		int size; //in KB
+		string name; //packname eg. "reissen"
+		string author;
+		struct file { int filesize; char *name; uint crc; };
+		vector<file *> files; //all included files and dependencies
 	};
 	vector<contentpack *> contentpacks;
 
@@ -1912,14 +1916,26 @@ namespace game
 			case N_PACKFILES:
 			{
 				int pack = getint(p);
+				string packname;
+				getstring(packname, p);
+				int totalsize = getint(p);
 				int files = getint(p);
 				
-				if(files > 0 && contentpacks.inrange(pack)) { 
+				if(files > 0) { 
 					loopi(files) { 
-						int size = getint(p);
+						
 						getstring(text, p);
+						int size = getint(p);
+						uint crc;
+						p.get((uchar*)&crc, 1);
 						if(p.overread()) break;
-						if(contentpacks[pack]) contentpacks[pack]->files.add(newstring(text));
+						if(contentpacks.inrange(pack) && contentpacks[pack]) {
+							contentpack *cp = contentpacks[pack];
+							contentpack::file *file = cp->files.add(new contentpack::file);
+							copystring(file->name, text);
+							file->filesize = size;
+							file->crc = crc;
+						}
 						//conoutf("%s is %d KB big", text, size);
 					}
 					sendfilerequest(pack, 0); //not in the loop anymore, just the first file, go for the next file afterwards
