@@ -64,7 +64,7 @@ function UiElement:removeChild(obj)
 end
 
 function UiElement:_sauerMaxWidth()
-    return self.maxWidth == 1/0 and -1 or self.maxwidth
+    return self.maxWidth == 1/0 and -1 or self.maxWidth
 end
 
 -- X and Y are the actual screen coordinates of the element to draw
@@ -73,10 +73,10 @@ function UiElement:draw(x, y)
     local origionalX = x
     local maxH = 0
     for k, element in pairs(self.children) do
-        local _x, _y = x + element.x, y + element.y
+        local _x, _y = x + element.x, y + element.y -- Actual starting position of the element
         local w, h = element.w, element.h
         maxH = max(maxH, h)
-        element:draw(_x, _y)
+        element:draw(x, y)
         if self.alignment == 1 then
             _x = x + w
             if _x >= self.maxWidth or _x + w >= self.maxWidth then
@@ -142,7 +142,7 @@ function BoxElement:draw(x_, y_)
     end
     native.glPopMatrix()
     
-    UiElement.draw(self, x_, y_)
+    UiElement.draw(self, x, y)
 end
 
 local TextElement = UiElement:extend()
@@ -266,8 +266,60 @@ function LoadingBarElement:draw(x, y)
     self.loadingText:draw(x, y)
 end
 
+local DialogElement = UiElement:extend()
+
+DialogElement._addChild = UiElement.addChild
+
+function DialogElement:addChild(...)
+    return self.body:addChild(...)
+end
+
+function DialogElement:initialize(title)
+    UiElement.initialize(self)
+
+    self.titleBarElement = BoxElement:new()
+    self.titleBarElement.h = 30
+    self.titleBarElement.x, self.titleBarElement.y = 0, 0
+    
+    self.titleElement = TextElement:new(title or "Unnamed dialog")
+    self.titleElement.scale = 0.5
+    self.titleBarElement:addChild(self.titleElement)
+
+    self.closeButtonElement = BoxElement:new()
+    self.closeButtonElement.w = 40
+    self.closeButtonElement.h = 25
+    self.titleBarElement:addChild(self.closeButtonElement)
+
+    self.body = BoxElement:new()
+
+    self:_addChild(self.titleBarElement)
+    self:_addChild(self.body)
+
+    self:calculateDimensions()
+end
+
+function DialogElement:calculateDimensions()
+    self.body.y = self.titleBarElement.h
+    self.body.x = 2
+    self.body.w = self.w - self.body.x * 2
+    self.body.h = self.h - self.titleBarElement.h
+
+    self.titleBarElement.w = self.w
+    self.titleBarElement.maxWidth = self.w
+
+    self.titleElement.maxWidth = self.titleBarElement.w - self.closeButtonElement.w - 3 * 5
+    self.titleElement:calculateDimensions()
+    self.titleElement.x = max(5, self.titleElement.maxWidth/2 - self.titleElement.w/2)
+    self.titleElement.y = self.titleBarElement.h/2 - self.titleElement.h/2
+
+    self.closeButtonElement.x = self.titleBarElement.w - 5 - self.closeButtonElement.w
+end
+
+
+
 local UiRoot = UiElement:extend()
 
+local dialog
 local loadingBar
 local uiRoot
 local box
@@ -294,6 +346,12 @@ _G.setCallback("gui.draw", function(w, h)
             uiRoot:addChild(TextElement:new("1234", "digit_blue"))
             uiRoot.maxWidth = 700
             uiRoot.alignment = 1
+            
+            dialog = DialogElement:new()
+            dialog.w = 500
+            dialog.h = 500
+            dialog:calculateDimensions()
+            dialog:addChild(loadingBar)
         end
 
         local progress = max(0, (loadingBar.progress * 100 + mode)/100)
@@ -306,7 +364,8 @@ _G.setCallback("gui.draw", function(w, h)
             mode = -mode
         end
 
-        uiRoot:draw(0, 0)
+        --uiRoot:draw(0, 0)
+        dialog:draw(50, 50)
     end, traceback))
 end)
 
