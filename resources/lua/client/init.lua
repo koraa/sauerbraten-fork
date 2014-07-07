@@ -5,7 +5,8 @@ local traceback = require "debug".traceback
 local ffi = require "ffi"
 local table = require "table"
 local sort, remove = table.sort, table.remove
-local max = require "math".max
+local math = require "math"
+local max, min = math.max, math.min
 
 local native = require "client.native"
 
@@ -63,8 +64,21 @@ function UiElement:removeChild(obj)
     end
 end
 
+function UiElement:getWidth()
+    local width = self.w
+    if width < 0 and self.parent then
+        width = self.parent:getWidth()
+    end
+    return min(self:getMaxWidth(), width)
+end
+
+function UiElement:getMaxWidth()
+    return min(self.maxWidth, self.parent and self.parent:getMaxWidth() or 1/0)
+end
+
 function UiElement:_sauerMaxWidth()
-    return self.maxWidth == 1/0 and -1 or self.maxWidth
+    local maxWidth = self:getMaxWidth()
+    return maxWidth == 1/0 and -1 or maxWidth
 end
 
 -- X and Y are the actual screen coordinates of the element to draw
@@ -74,10 +88,10 @@ function UiElement:draw(x, y)
     local maxH = 0
     for k, element in pairs(self.children) do
         local _x, _y = x + element.x, y + element.y -- Actual starting position of the element
-        local w, h = element.w, element.h
-        maxH = max(maxH, h)
+        maxH = max(maxH, element.h)
         element:draw(x, y)
         if self.alignment == 1 then
+            local w = element:getWidth()
             _x = x + w
             if _x >= self.maxWidth or _x + w >= self.maxWidth then
                 -- Jump line
@@ -128,12 +142,14 @@ function BoxElement:draw(x_, y_)
         native.glColor4f(self.r, self.g, self.b, 1)
     end
 
+    local w = self:getWidth()
+    
     native.glBegin(native.GL_TRIANGLE_STRIP);
         for k, v in pairs({ {0,0}, {1, 0}, {0, 1}, {1, 1}}) do
             if self.texture then
                 native.glTexCoord2f(v[1], v[2])
             end
-            native.glVertex2f(x + v[1] * self.w,    y  + v[2] * self.h);
+            native.glVertex2f(x + v[1] * w,    y  + v[2] * self.h);
         end
     native.glEnd();
 
@@ -217,7 +233,7 @@ end
 
 local LoadingBarElement = UiElement:extend()
 
-LoadingBarElement.w = 500
+LoadingBarElement.w = -1
 LoadingBarElement.h = 50
 
 LoadingBarElement.border = 10
@@ -247,14 +263,15 @@ function LoadingBarElement:calculateDimensions()
     self.loadingText.scale = self.h/100
 
     self.loadingText:calculateDimensions()
-    self.loadingBackground.w, self.loadingBackground.h = self.w, self.h
-    self.loadingText.x = max(0, self.w/2 - self.loadingText.w/2)
+    self.loadingBackground.w, self.loadingBackground.h = self:getWidth(), self.h
+    self.loadingText.x = max(0, self:getWidth()/2 - self.loadingText:getWidth()/2)
     self.loadingText.y = max(0, self.h/2 - self.loadingText.h/2)
 
     self.loadingBar.x = self.border
     self.loadingBar.y = self.border
 
-    self.loadingBar.w = (self.w - 2 * self.border) * self.progress
+    self.loadingBar.maxWidth = self:getWidth() - 2 * self.border
+    self.loadingBar.w = self.loadingBar.maxWidth * self.progress
     self.loadingBar.h = self.h - 2 * self.border
 
 end
@@ -301,18 +318,18 @@ end
 function DialogElement:calculateDimensions()
     self.body.y = self.titleBarElement.h
     self.body.x = 2
-    self.body.w = self.w - self.body.x * 2
+    self.body.w = self:getWidth() - self.body.x * 2
     self.body.h = self.h - self.titleBarElement.h
 
-    self.titleBarElement.w = self.w
-    self.titleBarElement.maxWidth = self.w
+    self.titleBarElement.w = self:getWidth()
+    self.titleBarElement.maxWidth = self:getWidth()
 
-    self.titleElement.maxWidth = self.titleBarElement.w - self.closeButtonElement.w - 3 * 5
+    self.titleElement.maxWidth = self.titleBarElement:getWidth() - self.closeButtonElement:getWidth() - 3 * 5
     self.titleElement:calculateDimensions()
-    self.titleElement.x = max(5, self.titleElement.maxWidth/2 - self.titleElement.w/2)
+    self.titleElement.x = max(5, self.titleElement.maxWidth/2 - self.titleElement:getWidth()/2)
     self.titleElement.y = self.titleBarElement.h/2 - self.titleElement.h/2
 
-    self.closeButtonElement.x = self.titleBarElement.w - 5 - self.closeButtonElement.w
+    self.closeButtonElement.x = self.titleBarElement:getWidth() - 5 - self.closeButtonElement:getWidth()
 end
 
 
@@ -346,7 +363,7 @@ _G.setCallback("gui.draw", function(w, h)
             uiRoot:addChild(TextElement:new("1234", "digit_blue"))
             uiRoot.maxWidth = 700
             uiRoot.alignment = 1
-            
+
             dialog = DialogElement:new()
             dialog.w = 500
             dialog.h = 500
