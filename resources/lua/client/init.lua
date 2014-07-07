@@ -6,7 +6,7 @@ local ffi = require "ffi"
 local table = require "table"
 local sort, remove = table.sort, table.remove
 local math = require "math"
-local max, min = math.max, math.min
+local max, min, floor = math.max, math.min, math.floor
 
 local native = require "client.native"
 
@@ -32,6 +32,10 @@ UiElement.alignment = 0
 -- Relations to other elements
 UiElement.parent = nil
 UiElement.children = nil
+
+UiElement.captureInput = false
+UiElement.hovering = false
+UiElement.dragging = false
 
 function UiElement:initialize()
     self.children = {}
@@ -90,6 +94,7 @@ end
 -- X and Y are the actual screen coordinates of the element to draw
 -- Note that Z only affects sorting of the element and it's siblings
 function UiElement:draw(x, y)
+    x, y = x + self.x, y + self.y
     local origionalX = x
     local maxH = 0
     for k, element in pairs(self.children) do
@@ -111,6 +116,39 @@ function UiElement:draw(x, y)
             y = _y + element.h
         end
     end
+end
+
+local function isTouching(x, y, posx, posy, w, h)
+    return      posx <= x and posx + w >= x
+            and posy <= y and posy + h >= y
+end
+
+-- X and Y hover relative to the parent's origin
+-- Value is true when this element is hit
+function UiElement:hover(x, y, value)
+    x, y = x - self.x, y - self.y  -- Translate to our origin
+    self.hovering = value
+    for k, element in pairs(self.children) do
+        if isTouching(x, y, element.x, element.y, element.w, element.h)  then
+            element:hover(x, y, true)
+        elseif element.hovering then
+            element:hover(x, y, false)
+        end
+    end
+end
+
+-- X and Y hover relative to the parent's origin
+-- Returns true when the event is handled
+function UiElement:click(x, y)
+    x, y = self.x + x, self.y + y
+    for k, element in pairs(self.children) do
+        if isTouching(x, y, element.x, element.y, element.w, element.h)  then
+            if element:click(x, y) == true then
+                return true
+            end
+        end
+    end
+    return false
 end
 
 local BoxElement = UiElement:extend()
@@ -139,7 +177,7 @@ function BoxElement:draw(x_, y_)
     native.glPushMatrix();
     native.glScalef(1, 1, 1);
 
-    if DEBUG then
+    if DEBUG and not self.hovering then
         native.glPolygonMode( native.GL_FRONT_AND_BACK, native.GL_LINE );
     end
 
@@ -151,7 +189,7 @@ function BoxElement:draw(x_, y_)
     end
 
     local w = self:getWidth()
-    
+
     native.glBegin(native.GL_TRIANGLE_STRIP);
         for k, v in pairs({ {0,0}, {1, 0}, {0, 1}, {1, 1}}) do
             if self.texture then
@@ -161,11 +199,11 @@ function BoxElement:draw(x_, y_)
         end
     native.glEnd();
 
-    if DEBUG then
+    if DEBUG and not self.hovering then
         native.glPolygonMode( native.GL_FRONT_AND_BACK, native.GL_FILL);
     end
     native.glPopMatrix()
-    
+
     UiElement.draw(self, x, y)
 end
 
@@ -183,7 +221,7 @@ TextElement.scale = 1
 TextElement.font = nil
 
 --What does this actually do?
-TextElement.cursor = -1 
+TextElement.cursor = -1
 
 function TextElement:setText(text)
     self.text = tostring(text or "")
@@ -200,7 +238,7 @@ function TextElement:calculateDimensions()
     local x, y = ffi.new("int[1]", 0), ffi.new("int[1]", 0)
     native.text_boundsp(self.text, x, y, self:_sauerMaxWidth()/ self.scale)
     self.w, self.h = x[0] * self.scale, y[0] * self.scale
-    
+
     if self.font then
         native.popfont()
     end
@@ -228,7 +266,7 @@ function TextElement:draw(x, y)
         native.pushfont()
         native.setfont(self.font)
     end
-    
+
     native.glPushMatrix()
         native.glScalef(self.scale, self.scale, 1);
         native.draw_text(self.text, x/self.scale, y/self.scale, self.r*255, self.g*255, self.b*255, self.a*255, self.cursor, self:_sauerMaxWidth()/ self.scale)
@@ -312,7 +350,7 @@ function DialogElement:initialize(title)
     self.titleBarElement = BoxElement:new()
     self.titleBarElement.h = 30
     self.titleBarElement.x, self.titleBarElement.y = 0, 0
-    
+
     self.titleElement = TextElement:new(title or "Unnamed dialog")
     self.titleElement.scale = 0.5
     self.titleBarElement:addChild(self.titleElement)
@@ -365,33 +403,23 @@ local UiRoot = UiElement:extend()
 
 local dialog
 local loadingBar
-local uiRoot
 local box
-local mode = -1
+local mode = -0.001
+
+local lastCursorX, lastCursorY
+local cursorX, cursorY
 
 _G.setCallback("gui.draw", function(w, h)
     assert(xpcall(function()
-        if not uiRoot then
-            uiRoot = UiRoot:new()
-
+        if not box then
             loadingBar = LoadingBarElement:new("", 0)
-            uiRoot:addChild(loadingBar)
 
             box = BoxElement:new()
-            box.w = 100
-            box.h = 100
-
-            uiRoot:addChild(box)
-
-            uiRoot:addChild(TextElement:new())
-            uiRoot:addChild(TextElement:new())
-            uiRoot:addChild(TextElement:new("1234", "digit_grey"))
-            uiRoot:addChild(TextElement:new("1234", "digit_red"))
-            uiRoot:addChild(TextElement:new("1234", "digit_blue"))
-            uiRoot.maxWidth = 700
-            uiRoot.alignment = 1
+            box.w = 10
+            box.h = 10
 
             dialog = DialogElement:new()
+            dialog.x, dialog.y = 50, 50
 
             local dummyText = TextElement:new(
                 [[Lorem Ipsum solor di amet
@@ -405,20 +433,26 @@ This is an example text to demonstare the gui rendering]]
 
         local progress = max(0, (loadingBar.progress * 100 + mode)/100)
         loadingBar:setProgress(("Doing nothing %f %i"):format(progress, mode), progress)
-        
+
         box.w = box.w + mode
         box.h = box.h + mode
 
-        if box.h >= 100 or box.h <= 0 then
+        if box.h >= 10 or box.h <= 0 then
             mode = -mode
         end
 
-        --uiRoot:draw(0, 0)
-        dialog:draw(50, 50)
+        if lastCursorX ~= native.cursorx or lastCursorY ~= native.cursory then
+            lastCursorX, lastCursorY = native.cursorx, native.cursory
+            cursorX, cursorY = floor(lastCursorX * w), floor(lastCursorY * h)
+            dialog:hover(cursorX, cursorY, true)
+        end
+
+        box:draw(cursorX-box.w/2, cursorY-box.h/2)
+        dialog:draw(0, 0)
     end, traceback))
 end)
 
-do 
+do
     local warned = {}
     setCallback("event.none", function(name)
         if not warned[name] then

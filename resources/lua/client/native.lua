@@ -17,8 +17,9 @@ ffi.cdef [[
 
     //EXPORTH(bool settexture(const char *name, int clamp = 0));
     bool settexture(const char *name, int clamp);
-    
-    
+
+    float cursorx, cursory;
+
 /**
  * OpenGL header, modified by killme to work with luajit
 */
