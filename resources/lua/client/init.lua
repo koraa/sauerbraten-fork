@@ -156,6 +156,8 @@ TextElement.a = 1
 
 TextElement.scale = 1
 
+TextElement.font = nil
+
 --What does this actually do?
 TextElement.cursor = -1 
 
@@ -166,13 +168,24 @@ end
 
 -- NOTE: calling this before fonts are loaded causes the game to segfault!
 function TextElement:calculateDimensions()
+    if self.font then
+        native.pushfont()
+        native.setfont(self.font)
+    end
+
     local x, y = ffi.new("int[1]", 0), ffi.new("int[1]", 0)
     native.text_boundsp(self.text, x, y, self:_sauerMaxWidth())
     self.w, self.h = x[0] * self.scale, y[0] * self.scale
+    
+    if self.font then
+        native.popfont()
+    end
 end
 
-function TextElement:initialize(text)
+function TextElement:initialize(text, font)
     UiElement.initialize(self)
+
+    self.font = font
 
     if text then
         self:setText(text)
@@ -187,10 +200,19 @@ function TextElement:draw(x, y)
 
     x, y = x + self.x, y + self.y
 
+    if self.font then
+        native.pushfont()
+        native.setfont(self.font)
+    end
+    
     native.glPushMatrix()
         native.glScalef(self.scale, self.scale, 1);
         native.draw_text(self.text, x/self.scale, y/self.scale, self.r*255, self.g*255, self.b*255, self.a*255, self.cursor, self:_sauerMaxWidth())
     native.glPopMatrix()
+
+    if self.font then
+        native.popfont()
+    end
 end
 
 local LoadingBarElement = UiElement:extend()
@@ -267,7 +289,9 @@ _G.setCallback("gui.draw", function(w, h)
 
             uiRoot:addChild(TextElement:new())
             uiRoot:addChild(TextElement:new())
-            uiRoot:addChild(TextElement:new())
+            uiRoot:addChild(TextElement:new("1234", "digit_grey"))
+            uiRoot:addChild(TextElement:new("1234", "digit_red"))
+            uiRoot:addChild(TextElement:new("1234", "digit_blue"))
             uiRoot.maxWidth = 700
             uiRoot.alignment = 1
         end

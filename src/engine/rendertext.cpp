@@ -100,7 +100,7 @@ void fontalias(const char *dst, const char *src)
 
 COMMAND(fontalias, "ss");
 
-bool setfont(const char *name)
+EXPORT(bool setfont(const char *name))
 {
     font *f = fonts.access(name);
     if(!f) return false;
@@ -110,12 +110,12 @@ bool setfont(const char *name)
 
 static vector<font *> fontstack;
 
-void pushfont()
+EXPORT(void pushfont())
 {
     fontstack.add(curfont);
 }
 
-bool popfont()
+EXPORT(bool popfont())
 {
     if(fontstack.empty()) return false;
     curfont = fontstack.pop();

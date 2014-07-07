@@ -5,9 +5,19 @@ ffi.cdef [[
     void draw_text(const char *str, int left, int top, int r, int g, int b, int a, int cursor, int maxwidth);
 
     void text_boundsp(const char *str, int *w, int *h, int maxwidth);
-    
+
+    //EXPORTH(bool setfont(const char *name));
+    bool setfont(const char *name);
+
+    //EXPORTH(void pushfont());
+    void pushfont();
+
+    //EXPORTH(bool popfont());
+    bool popfont();
+
     //EXPORTH(bool settexture(const char *name, int clamp = 0));
     bool settexture(const char *name, int clamp);
+    
     
 /**
  * OpenGL header, modified by killme to work with luajit
