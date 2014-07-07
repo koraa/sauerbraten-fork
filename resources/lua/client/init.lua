@@ -9,6 +9,8 @@ local max = require "math".max
 
 local native = require "client.native"
 
+local DEBUG = true
+
 local UiElement = Emitter:extend()
 
 -- Location relative to the parent
@@ -98,10 +100,26 @@ BoxElement.g = 1
 BoxElement.b = 1
 
 -- BoxElement.a = 1 TODO: implement
+function BoxElement:initialize(a, b, c)
+    UiElement.initialize(self)
 
-function BoxElement:draw(x, y)
+    if type(a) == "string" then
+        self.texture = a
+    elseif type(a) ~= "nil" then
+        self.a = self.a or a
+        self.b = self.b or b
+        self.c = self.c or c
+    end
+end
+
+function BoxElement:draw(x_, y_)
+    local x, y = x_ + self.x, y_ + self.y
     native.glPushMatrix();
     native.glScalef(1, 1, 1);
+
+    if DEBUG then
+        native.glPolygonMode( native.GL_FRONT_AND_BACK, native.GL_LINE );
+    end
 
     if self.texture then
         native.glColor4f(1, 1, 1, 1)
@@ -118,9 +136,13 @@ function BoxElement:draw(x, y)
             native.glVertex2f(x + v[1] * self.w,    y  + v[2] * self.h);
         end
     native.glEnd();
+
+    if DEBUG then
+        native.glPolygonMode( native.GL_FRONT_AND_BACK, native.GL_FILL);
+    end
     native.glPopMatrix()
     
-    UiElement.draw(self, x, y)
+    UiElement.draw(self, x_, y_)
 end
 
 local TextElement = UiElement:extend()
@@ -131,6 +153,8 @@ TextElement.r = 1
 TextElement.g = 1
 TextElement.b = 1
 TextElement.a = 1
+
+TextElement.scale = 1
 
 --What does this actually do?
 TextElement.cursor = -1 
@@ -144,7 +168,7 @@ end
 function TextElement:calculateDimensions()
     local x, y = ffi.new("int[1]", 0), ffi.new("int[1]", 0)
     native.text_boundsp(self.text, x, y, self:_sauerMaxWidth())
-    self.w, self.h = x[0], y[0]
+    self.w, self.h = x[0] * self.scale, y[0] * self.scale
 end
 
 function TextElement:initialize(text)
@@ -162,20 +186,79 @@ function TextElement:draw(x, y)
     UiElement.draw(self, x, y)
 
     x, y = x + self.x, y + self.y
-    native.draw_text(self.text, x, y, self.r*255, self.g*255, self.b*255, self.a*255, self.cursor, self:_sauerMaxWidth())
+
+    native.glPushMatrix()
+        native.glScalef(self.scale, self.scale, 1);
+        native.draw_text(self.text, x/self.scale, y/self.scale, self.r*255, self.g*255, self.b*255, self.a*255, self.cursor, self:_sauerMaxWidth())
+    native.glPopMatrix()
+end
+
+local LoadingBarElement = UiElement:extend()
+
+LoadingBarElement.w = 500
+LoadingBarElement.h = 50
+
+LoadingBarElement.border = 10
+
+LoadingBarElement.progress = 1/2
+
+function LoadingBarElement:initialize(text, progress)
+    UiElement.initialize(self)
+
+    self.loadingText = TextElement:new(text)
+    self.progress = progress or self.progress
+
+    self.loadingBar = BoxElement:new(--[["data/loading_bar.png"]])
+    self.loadingBackground = BoxElement:new(--[["data/loading_frame.png"]])
+
+    self:calculateDimensions()
+end
+
+function LoadingBarElement:setProgress(text, progress)
+    self.loadingText:setText(text)
+    self.progress = progress
+
+    self:calculateDimensions()
+end
+
+function LoadingBarElement:calculateDimensions()
+    self.loadingText.scale = self.h/100
+
+    self.loadingText:calculateDimensions()
+    self.loadingBackground.w, self.loadingBackground.h = self.w, self.h
+    self.loadingText.x = max(0, self.w/2 - self.loadingText.w/2)
+    self.loadingText.y = max(0, self.h/2 - self.loadingText.h/2)
+
+    self.loadingBar.x = self.border
+    self.loadingBar.y = self.border
+
+    self.loadingBar.w = (self.w - 2 * self.border) * self.progress
+    self.loadingBar.h = self.h - 2 * self.border
+
+end
+
+function LoadingBarElement:draw(x, y)
+    x, y = x + self.x, y + self.y
+    self.loadingBackground:draw(x, y)
+    self.loadingBar:draw(x, y)
+    self.loadingText:draw(x, y)
 end
 
 local UiRoot = UiElement:extend()
 
+local loadingBar
 local uiRoot
 local box
-local mode = 1
+local mode = -1
 
 _G.setCallback("gui.draw", function(w, h)
     assert(xpcall(function()
         if not uiRoot then
             uiRoot = UiRoot:new()
-            
+
+            loadingBar = LoadingBarElement:new("", 0)
+            uiRoot:addChild(loadingBar)
+
             box = BoxElement:new()
             box.w = 100
             box.h = 100
@@ -189,10 +272,13 @@ _G.setCallback("gui.draw", function(w, h)
             uiRoot.alignment = 1
         end
 
+        local progress = max(0, (loadingBar.progress * 100 + mode)/100)
+        loadingBar:setProgress(("Doing nothing %f %i"):format(progress, mode), progress)
+        
         box.w = box.w + mode
         box.h = box.h + mode
 
-        if box.h > 100 or box.h < 0 then
+        if box.h >= 100 or box.h <= 0 then
             mode = -mode
         end
 
