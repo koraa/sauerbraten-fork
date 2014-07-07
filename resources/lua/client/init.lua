@@ -64,6 +64,12 @@ function UiElement:removeChild(obj)
     end
 end
 
+function UiElement:calculateDimensions()
+    for k, child in pairs(self.children) do
+        child:calculateDimensions()
+    end
+end
+
 function UiElement:getWidth()
     local width = self.w
     if width < 0 and self.parent then
@@ -101,6 +107,8 @@ function UiElement:draw(x, y)
             else
                 x = _x
             end
+        elseif self.alignment == 4 then
+            y = _y + element.h
         end
     end
 end
@@ -190,7 +198,7 @@ function TextElement:calculateDimensions()
     end
 
     local x, y = ffi.new("int[1]", 0), ffi.new("int[1]", 0)
-    native.text_boundsp(self.text, x, y, self:_sauerMaxWidth())
+    native.text_boundsp(self.text, x, y, self:_sauerMaxWidth()/ self.scale)
     self.w, self.h = x[0] * self.scale, y[0] * self.scale
     
     if self.font then
@@ -223,7 +231,7 @@ function TextElement:draw(x, y)
     
     native.glPushMatrix()
         native.glScalef(self.scale, self.scale, 1);
-        native.draw_text(self.text, x/self.scale, y/self.scale, self.r*255, self.g*255, self.b*255, self.a*255, self.cursor, self:_sauerMaxWidth())
+        native.draw_text(self.text, x/self.scale, y/self.scale, self.r*255, self.g*255, self.b*255, self.a*255, self.cursor, self:_sauerMaxWidth()/ self.scale)
     native.glPopMatrix()
 
     if self.font then
@@ -244,10 +252,14 @@ function LoadingBarElement:initialize(text, progress)
     UiElement.initialize(self)
 
     self.loadingText = TextElement:new(text)
+    self:addChild(self.loadingText)
     self.progress = progress or self.progress
 
     self.loadingBar = BoxElement:new(--[["data/loading_bar.png"]])
+    self:addChild(self.loadingBar)
+
     self.loadingBackground = BoxElement:new(--[["data/loading_frame.png"]])
+    self:addChild(self.loadingBackground)
 
     self:calculateDimensions()
 end
@@ -285,6 +297,9 @@ end
 
 local DialogElement = UiElement:extend()
 
+DialogElement.w = 500
+DialogElement.h = 500
+
 DialogElement._addChild = UiElement.addChild
 
 function DialogElement:addChild(...)
@@ -307,7 +322,12 @@ function DialogElement:initialize(title)
     self.closeButtonElement.h = 25
     self.titleBarElement:addChild(self.closeButtonElement)
 
+    self.closeCrossElement = TextElement:new("X")
+    self.closeCrossElement.scale = 0.4
+    self.closeButtonElement:addChild(self.closeCrossElement)
+
     self.body = BoxElement:new()
+    self.body.alignment = 4
 
     self:_addChild(self.titleBarElement)
     self:_addChild(self.body)
@@ -319,6 +339,7 @@ function DialogElement:calculateDimensions()
     self.body.y = self.titleBarElement.h
     self.body.x = 2
     self.body.w = self:getWidth() - self.body.x * 2
+    self.body.maxWidth = self.body.w
     self.body.h = self.h - self.titleBarElement.h
 
     self.titleBarElement.w = self:getWidth()
@@ -327,9 +348,15 @@ function DialogElement:calculateDimensions()
     self.titleElement.maxWidth = self.titleBarElement:getWidth() - self.closeButtonElement:getWidth() - 3 * 5
     self.titleElement:calculateDimensions()
     self.titleElement.x = max(5, self.titleElement.maxWidth/2 - self.titleElement:getWidth()/2)
-    self.titleElement.y = self.titleBarElement.h/2 - self.titleElement.h/2
+    self.titleElement.y = max(0, self.titleBarElement.h/2 - self.titleElement.h/2)
 
     self.closeButtonElement.x = self.titleBarElement:getWidth() - 5 - self.closeButtonElement:getWidth()
+
+    self.closeCrossElement:calculateDimensions()
+    self.closeCrossElement.x = self.closeButtonElement:getWidth()/2 - self.closeCrossElement.w/2
+    self.closeCrossElement.y = self.closeButtonElement.h/2 - self.closeCrossElement.h/2
+
+    UiElement.calculateDimensions(self)
 end
 
 
@@ -365,10 +392,15 @@ _G.setCallback("gui.draw", function(w, h)
             uiRoot.alignment = 1
 
             dialog = DialogElement:new()
-            dialog.w = 500
-            dialog.h = 500
-            dialog:calculateDimensions()
+
+            local dummyText = TextElement:new(
+                [[Lorem Ipsum solor di amet
+This is an example text to demonstare the gui rendering]]
+            )
+            dummyText.scale = 0.5
+            dialog:addChild(dummyText)
             dialog:addChild(loadingBar)
+            dialog:calculateDimensions()
         end
 
         local progress = max(0, (loadingBar.progress * 100 + mode)/100)
