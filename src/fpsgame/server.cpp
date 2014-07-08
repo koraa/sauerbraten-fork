@@ -1183,7 +1183,7 @@ namespace server
 		int size; //in KB
 		string name; //packname eg. "reissen"
 		string author;
-		struct file { int filesize; char *name; uint crc; };
+		struct file { int filesize; string name; uint crc; };
 		vector<file *> files; //all included files and dependencies
 		void calcsize()
 		{
@@ -1215,7 +1215,7 @@ namespace server
 	{
 		if(!fn || !fn[0] || !contentpacks.length()) return;
 		contentpack *p = contentpacks.last();
-		p->files.add(new contentpack::file)->name = newstring(fn);
+		copystring(p->files.add(new contentpack::file)->name, fn);
 	}
 	ICOMMAND(packfile, "s", (const char *fn), newpackfile(fn));
 	
@@ -1254,7 +1254,7 @@ namespace server
 		loopv(cp->files) { 
 			sendstring(cp->files[i]->name, p); 
 			putint(p, cp->files[i]->filesize);
-			p.put((uchar*)&cp->files[i]->crc, 3);
+			//p.put((uchar*)&cp->files[i]->crc, 3);
 		}
         sendpacket(cn, 1, p.finalize());
     }
@@ -1276,8 +1276,14 @@ namespace server
 		if(!cp->files.inrange(file) || !cp->files[file]) return;
 		contentpack::file *f = cp->files[file];
 		int len;
+		string msg;
 		stream *s = openrawfile(path(f->name), "rb");
-		if(!s) { conoutf("no file found on the server"); return; }
+		if(!s) { 
+			formatstring(msg) ("corrupted pack: %s (%d). File %s (%d) not found on the server", cp->name, pack, f->name, file); 
+			sendf(ci->clientnum, 1, "ris", N_SERVMSG, msg);
+			sendf(ci->clientnum, 2, "riiisi", N_SENDFILE, pack, file, f->name, -1);
+			return; 
+		}
 		int cursize = 0;
 		for(int i = 0; i <= file; i++) { cursize += cp->files[i]->filesize; }
 		int percentage = cursize*100/cp->size;

@@ -875,17 +875,30 @@ namespace game
 		int size; //in KB
 		string name; //packname eg. "reissen"
 		string author;
-		struct file { int filesize; char *name; uint crc; };
+		struct file { int filesize; string name; uint crc; };
 		vector<file *> files; //all included files and dependencies
 	};
 	vector<contentpack *> contentpacks;
-
-	bool sendfilerequest(int pack, int file)
+	bool allowedfile(const char *name)
 	{
-		// if(!hasfile(fn)) return false;
-        addmsg(N_GETFILE, "rii", pack, file);
+		//todo
 		return true;
 	}
+	bool sendfilerequest(int pack, int file)
+	{
+		if(!contentpacks.inrange(pack) || !contentpacks[pack] || !contentpacks[pack]->files.inrange(file) || !contentpacks[pack]->files[file]) return false;
+		contentpack::file *fi = contentpacks[pack]->files[file];
+		const char *fname = findfile(fi->name, "r");
+		if(!allowedfile(fname)) return false;
+		if(fileexists(fname, "r")) {
+			conoutf("skipped .. %s already exists", fname);
+			sendfilerequest(pack, file +1);
+			return false;
+		}
+        else addmsg(N_GETFILE, "rii", pack, file);
+		return true;
+	}
+
 
     static void sendposition(fpsent *d, packetbuf &q)
     {
@@ -1926,15 +1939,16 @@ namespace game
 						
 						getstring(text, p);
 						int size = getint(p);
-						uint crc;
-						p.get((uchar*)&crc, 1);
+					//	uint crc;
+					//	p.get((uchar*)&crc, 1);
 						if(p.overread()) break;
 						if(contentpacks.inrange(pack) && contentpacks[pack]) {
 							contentpack *cp = contentpacks[pack];
+							cp->size = totalsize;
 							contentpack::file *file = cp->files.add(new contentpack::file);
 							copystring(file->name, text);
 							file->filesize = size;
-							file->crc = crc;
+							//file->crc = crc;
 						}
 						//conoutf("%s is %d KB big", text, size);
 					}
@@ -2009,12 +2023,13 @@ namespace game
 				int pack = getint(p); //not explicitly 
 				int file = getint(p); //neccessary, just for requesting the next file afterwards
 
-				getstring(filename, p); //todo check consistent names
+				getstring(filename, p); 
 				int finished = getint(p); //in %
-				stream *f = openrawfile(path(filename), "wb");
-				if(!f) { conoutf("could not save file (%s)", filename); return; }
+				if(finished < 0 || !allowedfile(filename)) break;
+				stream *f = openrawfile(filename, "wb");
+				if(!f) { conoutf("could not save file (%s)", filename); break; }
 				if(finished <= 100) { 
-					conoutf("downloaded %d%%", finished);
+					conoutf("downloaded %d%% .. received %s", finished, filename);
 					sendfilerequest(pack, file+1); //request next file, todo check names and existens
 				}
 				else conoutf("received package");
